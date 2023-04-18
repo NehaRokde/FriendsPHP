@@ -67,7 +67,7 @@ $app->post('/performReaction',function($request, $response,  $args){
     $postOwnerId =  $request->getParsedBody()['postOwnerId'];
     $previousReactionType = $request->getParsedBody()['previousReactionType'];
     $newReactionType = $request->getParsedBody()['newReactionType'];
-    $message = "Operation Successful";
+    $message = "Operation Successfull";
 
     /*
         (previousReactionType , newReactionType)
@@ -122,6 +122,18 @@ $app->post('/performReaction',function($request, $response,  $args){
         if($errorData[1]){
         return checkError($response, $errorData);
         }  
+        
+        $nType = 'post-reaction';
+        $stmt = $pdo->prepare("DELETE FROM  `notifications` WHERE 
+        `notificationTo`=:notificationTo AND `notificationFrom` =:notificationFrom AND `postId` =:postId AND `type` =:type");
+        $stmt->bindParam(':notificationTo', $postOwnerId, PDO::PARAM_STR);
+        $stmt->bindParam(':notificationFrom', $userId, PDO::PARAM_STR);
+        $stmt->bindParam(':postId', $postId, PDO::PARAM_STR);
+        $stmt->bindParam(':type', $nType, PDO::PARAM_STR);
+        
+        $stmt= $stmt->execute();
+
+        
         $message = "Reaction Undo Successfull";
     }else{
         // previous = care, newReaction = wow
@@ -187,6 +199,10 @@ $app->post('/performReaction',function($request, $response,  $args){
         if($errorData[1]){
             return checkError($response, $errorData);
         }
+
+        if($userId != $postOwnerId){
+            sendNotification($postOwnerId, $userId, $postId, 'post-reaction');
+        }
         $message = "Reaction changed from ".$previousReactionType. " to ".$newReactionType;
     }
         // send back the updated reaction counts
@@ -203,7 +219,45 @@ $app->post('/performReaction',function($request, $response,  $args){
     
 
 });
+$app->get('/postdetail',function($request, $response,  $args){
+    include __DIR__ . '/../bootstrap/dbconnection.php';
 
+    $postId = $request->getQueryParams()['postId'];
+    $uid = $request->getQueryParams()['uid'];
+
+     $stmt = $pdo->prepare("
+                             SELECT posts.*, user.name, user.profileUrl,user.userToken
+                             FROM `posts` 
+                             LEFT join user
+                             ON
+                             posts.postUserId = user.uid
+                             WHERE `postId` = :postId
+                            ");
+    $stmt->bindParam(':postId', $postId, PDO::PARAM_INT);		 
+    $stmt->execute();
+    $errorData = $stmt->errorInfo();
+    if($errorData[1]){
+        return checkError($response, $errorData);
+    }
+    $result[0] =$stmt->fetch(PDO::FETCH_OBJ);
+    
+    $reactionCheck = checkOurReact($uid, $result[0]->postId);
+    if($reactionCheck){
+     
+     $result[0]->reactionType=$reactionCheck->reactionType;
+    }else{
+     $result[0]->reactionType="default";
+    }
+ 
+     $output['status']  = 200;
+     $output['message'] = "Post Details Fetched";
+     $output['posts'] = $result;
+
+     $payload = json_encode($output,JSON_NUMERIC_CHECK);
+     $response->getBody()->write($payload);
+     return $response->withHeader('Content-Type', 'application/json')->withStatus(200);   
+    
+});
 
 function getReactionCount($postId){
 

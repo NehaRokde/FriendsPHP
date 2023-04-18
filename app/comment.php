@@ -81,6 +81,15 @@
 		$output['message'] = "Comment Posted";
 		$output['comments'] = $comment;
 
+        if($commentBy != $postUserId){
+            sendNotification($postUserId, $commentBy, $commentPostId, 'post-comment');
+        }
+
+        if($commentOn == 'comment'){
+            if($commentBy != $commentUserId && $commentUserId != $postUserId){
+                sendNotification($commentUserId, $commentBy, $commentPostId, 'comment-reply');
+            }
+        }
 		$payload = json_encode($output);
 		$response->getBody()->write($payload);
 		return $response->withHeader('Content-Type', 'application/json')->withStatus(200);

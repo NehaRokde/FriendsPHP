@@ -25,6 +25,9 @@
 				$output['status']  = 200;
 				$output['message'] = "Unfriend Successfully !";
 
+				delete($response,'notifications', array('notificationTo' => $userId, 'notificationFrom' => $profileId, 'type' => 'request-accepted'));
+				delete($response,'notifications', array('notificationTo' => $profileId, 'notificationFrom' => $userId, 'type' => 'request-accepted'));
+
 				$payload = json_encode($output);
 				$response->getBody()->write($payload);
 				return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
@@ -35,6 +38,20 @@
 			// cancel friend Request
 
 			if(is_bool(delete($response,'requests', array('sender' => $userId, 'receiver' => $profileId)))){
+
+			delete($response,'notifications', array('notificationTo' => $userId, 'notificationFrom' => $profileId, 'type' => 'friend-request'));
+			delete($response,'notifications', array('notificationTo' => $profileId, 'notificationFrom' => $userId, 'type' => 'friend-request'));
+
+				$nPostId = -1;
+				$nType = 'friend-request';
+				$stmt = $pdo->prepare("DELETE FROM  `notifications` WHERE 
+				`notificationTo`=:notificationTo AND `notificationFrom` =:notificationFrom AND `postId` =:postId AND `type` =:type");
+				$stmt->bindParam(':notificationTo', $profileId, PDO::PARAM_STR);
+				$stmt->bindParam(':notificationFrom', $uid, PDO::PARAM_STR);
+				$stmt->bindParam(':postId', $nPostId, PDO::PARAM_STR);
+				$stmt->bindParam(':type', $nType, PDO::PARAM_STR);
+				$stmt = $stmt->execute();
+				
 			
 	
 			$output['status']  = 200;
@@ -71,6 +88,11 @@
 				
 				$output['status']  = 200;
 				$output['message'] = "You are Friends Now !";
+
+				delete($response,'notifications', array('notificationTo' => $userId, 'notificationFrom' => $profileId, 'type' => 'friend-request'));
+				delete($response,'notifications', array('notificationTo' => $profileId, 'notificationFrom' => $userId, 'type' => 'friend-request'));
+
+				sendNotification($profileId, $userId, -1, 'request-accepted');
 			
 				$payload = json_encode($output);
 				$response->getBody()->write($payload);
@@ -94,6 +116,8 @@
 
 			if(is_bool($result)){
 
+				sendNotification($profileId, $userId, -1, 'friend-request');
+				
 				
 				$output['status']  = 200;
 				$output['message'] = "Friend Request Sent !";

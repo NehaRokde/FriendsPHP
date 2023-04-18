@@ -10,6 +10,7 @@ require_once __DIR__ . '/../middleware/BeforeMiddleware.php';
 require_once __DIR__ . '/../middleware/AfterMiddleware.php';
 
 
+
 $app = AppFactory::create();
 $app->setBasePath('/friendstor/public');
 
@@ -34,12 +35,10 @@ $customErrorHandler = function (
     
     $response = $app->getResponseFactory()->createResponse();
 
-    $response->getBody()->write(
-        json_encode($payload)
-    );
+    $response->getBody()->write( json_encode($payload));
 
     return $response->withHeader('Content-Type','application/json')
-                    ->withStatus($exception->getCode() !=0 ? $exception->getCode() : 500);
+                    ->withStatus($exception->getCode() != 0 ? $exception->getCode() : 500 );
 };
 
 // Add Error Middleware
@@ -56,6 +55,10 @@ require_once __DIR__ .'/../app/utils.php';
 require_once __DIR__ .'/../app/post.php';
 require_once __DIR__ .'/../app/friend.php';
 require_once __DIR__ .'/../app/comment.php';
+require_once __DIR__ .'/../app/notification.php';
+require_once __DIR__ .'/../app/serverkey.php';
+
+
 
 $app->run();
 
